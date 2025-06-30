@@ -3,6 +3,11 @@
 SHELL := /bin/bash
 
 # -------------------------------
+# Phony Targets
+# -------------------------------
+.PHONY: all run run-all clean
+
+# -------------------------------
 # Configurable Variables
 # -------------------------------
 MARCH   ?= rv64g
@@ -22,29 +27,45 @@ SPIKE_FLAGS += -d
 endif
 
 # -------------------------------
+# Test List
+# -------------------------------
+TESTS := add sub
+
+# -------------------------------
 # Default Target
 # -------------------------------
 .DEFAULT_GOAL := run
 
 # -------------------------------
-# Build ELF Target
+# Pattern Rule for Building ELFs
 # -------------------------------
-$(TEST).elf: $(TEST).S link.ld march_test.h test_macros.h
+%.elf: %.S link.ld march_test.h test_macros.h
 	@echo "[Compiling] $< -> $@"
 	@$(CC) $(CFLAGS) $< -o $@ -T link.ld
 
 # -------------------------------
-# Run on Spike
+# Build All ELFs
 # -------------------------------
-.PHONY: run
+all: $(TESTS:%=%.elf)
+
+# -------------------------------
+# Run Single Test on Spike
+# -------------------------------
 run: $(TEST).elf
 	@echo "[Running on Spike] $(TEST).elf"
 	@spike -l $(SPIKE_FLAGS) -m0x80000000:0x800000 $(TEST).elf
 
 # -------------------------------
+# Run All Tests on Spike
+# -------------------------------
+run-all: all
+	@for test in $(TESTS); do \
+		$(MAKE) TEST=$$test run || exit 1; \
+	done
+
+# -------------------------------
 # Clean
 # -------------------------------
-.PHONY: clean
 clean:
 	@echo "[Cleaning]"
 	@$(RM) *.elf

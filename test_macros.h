@@ -21,6 +21,21 @@
   bne rd, t2, fail
 
 
+  /*
+ * TEST_SUB(rd, a, b, expected)
+ * - Loads a, b into t0, t1
+ * - Performs rd = a - b
+ * - Compares result to expected
+ */
+#define TEST_SUB(rd, a, b, expected) \
+  li  t0, a;                         \
+  li  t1, b;                         \
+  sub rd, t0, t1;                    \
+  li  t2, expected;                  \
+  bne rd, t2, fail
+
+
+
 #define MARCH_TEST_CODE_BEGIN   \
     .section .text;         \
     .globl _start;        \
