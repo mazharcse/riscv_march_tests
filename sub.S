@@ -12,12 +12,14 @@ MARCH_TEST_CODE_BEGIN
     TEST_SUB(x6, -5, -5, 0)    # -5 - (-5) = 0
     TEST_SUB(x7, 0, 10, -10)   # 0 - 10 = -10
 
-    TEST_PASS
+    TEST_PASSFAIL
 
-fail:
-    TEST_FAIL
+MARCH_TEST_CODE_END
 
 loop:
     j loop
 
+
 MARCH_TEST_DATA_BEGIN
+
+MARCH_TEST_DATA_END
