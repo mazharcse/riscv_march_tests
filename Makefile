@@ -68,9 +68,22 @@ run: $(OUTDIR)/$(TEST).elf
 # Run All Tests on Spike
 # -------------------------------
 run-all: all
-	@for test in $(TESTS); do \
-		$(MAKE) TEST=$$test run || exit 1; \
-	done
+	@failed_tests=""; \
+	for test in $(TESTS); do \
+		echo "[Running] $$test"; \
+		if $(MAKE) TEST=$$test run; then \
+			echo "[PASS] $$test"; \
+		else \
+			echo "[FAIL] $$test"; \
+			failed_tests="$$failed_tests $$test"; \
+		fi; \
+	done; \
+	if [ -n "$$failed_tests" ]; then \
+		echo "[SUMMARY] Failed tests:$$failed_tests"; \
+		exit 1; \
+	else \
+		echo "[SUMMARY] All tests passed"; \
+	fi
 
 # -------------------------------
 # Clean
@@ -78,7 +91,3 @@ run-all: all
 clean:
 	@echo "[Cleaning]"
 	$(RM) $(OUTDIR)/*.elf
-
-
-
-
