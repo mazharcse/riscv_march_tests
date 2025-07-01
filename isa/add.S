@@ -10,7 +10,7 @@
 
 MARCH_TEST_CODE_BEGIN 
 
-    TEST_ADD(x5, 10, 20, 30)   # x5 = 10+20 = 30
+    TEST_ADD(x5, 10, 20, 40)   # x5 = 10+20 = 30
     TEST_ADD(x6, -5, 5, 0)     # x6 = -5+5 = 0
     TEST_ADD(x7, 0, 0, 0)      # x7 = 0+0 = 0
 

@@ -8,7 +8,7 @@
 
 MARCH_TEST_CODE_BEGIN
 
-    TEST_SUB(x5, 10, 5, 5)     # 10 - 5 = 5
+    TEST_SUB(x5, 10, 5, 4)     # 10 - 5 = 5
     TEST_SUB(x6, -5, -5, 0)    # -5 - (-5) = 0
     TEST_SUB(x7, 0, 10, -10)   # 0 - 10 = -10
 

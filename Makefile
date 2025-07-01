@@ -18,13 +18,16 @@ TEST    ?= add
 # Toolchain and Flags
 # -------------------------------
 CC      := riscv64-unknown-elf-gcc
-CFLAGS  := -march=$(MARCH) -nostdlib -nostartfiles -I.
+CFLAGS  := -march=$(MARCH) -nostdlib -nostartfiles -Ienv -Imacros
 
 # Spike flags
 SPIKE_FLAGS :=
 ifeq ($(DEBUG), 1)
 SPIKE_FLAGS += -d
 endif
+
+# Output directory
+OUTDIR := build
 
 # -------------------------------
 # Test List
@@ -37,23 +40,29 @@ TESTS := add sub
 .DEFAULT_GOAL := run
 
 # -------------------------------
+# Ensure build/ directory exists
+# -------------------------------
+$(OUTDIR):
+	@mkdir -p $(OUTDIR)
+
+# -------------------------------
 # Pattern Rule for Building ELFs
 # -------------------------------
-%.elf: %.S link.ld march_test.h test_macros.h
+$(OUTDIR)/%.elf: isa/%.S env/link.ld env/march_test.h macros/test_macros.h | $(OUTDIR)
 	@echo "[Compiling] $< -> $@"
-	@$(CC) $(CFLAGS) $< -o $@ -T link.ld
+	$(CC) $(CFLAGS) $< -o $@ -T env/link.ld
 
 # -------------------------------
 # Build All ELFs
 # -------------------------------
-all: $(TESTS:%=%.elf)
+all: $(TESTS:%=$(OUTDIR)/%.elf)
 
 # -------------------------------
 # Run Single Test on Spike
 # -------------------------------
-run: $(TEST).elf
-	@echo "[Running on Spike] $(TEST).elf"
-	@spike -l $(SPIKE_FLAGS) -m0x80000000:0x800000 $(TEST).elf
+run: $(OUTDIR)/$(TEST).elf
+	@echo "[Running on Spike] $(OUTDIR)/$(TEST).elf"
+	spike -l $(SPIKE_FLAGS) -m0x80000000:0x800000 $(OUTDIR)/$(TEST).elf
 
 # -------------------------------
 # Run All Tests on Spike
@@ -68,7 +77,7 @@ run-all: all
 # -------------------------------
 clean:
 	@echo "[Cleaning]"
-	@$(RM) *.elf
+	$(RM) $(OUTDIR)/*.elf
 
 
 
