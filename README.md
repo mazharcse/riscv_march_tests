@@ -102,8 +102,8 @@ add.S **** PASS ***
 sub.S **** FAILED ***
 
 ___________________________ SUMMARY ____________________________
-PASS    : 0
-FAIL    : 2
+PASS    : 1
+FAIL    : 1
 WARNING : 0
 ERROR   : 0
 
