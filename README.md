@@ -1,6 +1,6 @@
 # RISC-V Microarchitectural Tests
 
-This project provides a Makefile to build and run RISC-V assembly tests using the Spike simulator.
+This repository hosts microarchitectural tests for RISC-V processors.
 
 ## Prerequisites
 
