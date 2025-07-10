@@ -1,27 +1,19 @@
 ENTRY(_start)
 
-SECTIONS {
+SECTIONS
+{
   . = 0x80000000;
 
   .text : {
-    *(.text*)
-  }
-
-  .rodata : {
-    *(.rodata*)
+    *(.text)
   }
 
   .data : {
-    *(.data*)
+    *(.data)
   }
 
   .bss : {
-    __bss_start = .;
-    *(.bss*)
-    __bss_end = .;
-  }
-
-  /DISCARD/ : {
-    *(.comment*)
+    *(.bss)
+    *(COMMON)
   }
 }

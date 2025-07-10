@@ -1,117 +1,84 @@
-# Makefile for RISC-V March Tests
+# Default test file if not specified
+TEST ?= context_switch
+TEST_FILE := isa/$(notdir $(TEST)).S
+INSTALL_PATH =
+INSTALL_DIR = $(abspath $(INSTALL_PATH) )
 
-SHELL := /bin/bash
+LINKERFILE = env/link.ld
+NAME       = $(basename $(notdir $(TEST_FILE)))
 
-# -------------------------------
-# Phony Targets
-# -------------------------------
-.PHONY: all run run-all clean
+#RISCV_INSTALL = ~/usr/riscv
+#RISCV_BIN     = $(RISCV_INSTALL)/bin
 
-# -------------------------------
-# Configurable Variables
-# -------------------------------
-MARCH   ?= rv64g
-DEBUG   ?= 0
-TEST    ?= add
+#GCC     = $(RISCV_BIN)/riscv32-unknown-elf-gcc
+#OBJCOPY = $(RISCV_BIN)/riscv32-unknown-elf-objcopy
+#OBJDUMP = $(RISCV_BIN)/riscv32-unknown-elf-objdump
+GCC     = riscv64-unknown-elf-gcc
+OBJCOPY = riscv64-unknown-elf-objcopy
+OBJDUMP = riscv64-unknown-elf-objdump
+NM      = riscv64-unknown-elf-nm
 
-# -------------------------------
-# Toolchain and Flags
-# -------------------------------
-CC      := riscv64-unknown-elf-gcc
-CFLAGS  := -march=$(MARCH) -nostdlib -nostartfiles -Ienv -Imacros
+ELF2SYM = ./elf2sym.py
+# ELF2SYM = $(RISCV_CORE_ROOT)/bin/elf2sym.py
 
-# Spike flags
-SPIKE_FLAGS :=
-ifeq ($(DEBUG), 1)
-SPIKE_FLAGS += -d
-endif
+# 16b and 32b instructions
+GCC_OPT =-nostdlib -nostartfiles -Wl,--no-relax -Wa,-als,-al
+#GCC_OPT =-nostdlib -nostartfiles -Wa,-als,-al
 
-# Output directory
-OUTDIR := build
+GCC_LINK_OPT =-nostdlib -nostartfiles -Wl,--no-relax -Wa,-als,-al
 
-# -------------------------------
-# Test List
-# -------------------------------
-TESTS := add sub
+MARCH =-march=rv64gv_zicbom
 
-# -------------------------------
-# Default Target
-# -------------------------------
-.DEFAULT_GOAL := run
+BUILD_DIR = build
+INCLUDES = -Imacros -Ienv
 
-# -------------------------------
-# Ensure build/ directory exists
-# -------------------------------
-$(OUTDIR):
-	@mkdir -p $(OUTDIR)
+SOURCES := $(wildcard isa/*.S)
+NAMES := $(basename $(notdir $(SOURCES)))
+OBJS := $(addprefix $(BUILD_DIR)/,$(addsuffix .o,$(NAMES)))
+ELFS := $(addprefix $(BUILD_DIR)/,$(addsuffix .elf,$(NAMES)))
+HEXS := $(addprefix $(BUILD_DIR)/,$(addsuffix .hex,$(NAMES)))
+SYMS := $(addprefix $(BUILD_DIR)/,$(addsuffix .sym,$(NAMES)))
+DISS := $(addprefix $(BUILD_DIR)/,$(addsuffix .dis,$(NAMES)))
 
-# -------------------------------
-# Pattern Rule for Building ELFs
-# -------------------------------
-$(OUTDIR)/%.elf: isa/%.S env/link.ld env/march_test.h macros/test_macros.h | $(OUTDIR)
-	@echo "[Compiling] $< -> $@"
-	$(CC) $(CFLAGS) $< -o $@ -T env/link.ld
+all: $(HEXS) $(SYMS) $(DISS)
 
-# -------------------------------
-# Build All ELFs
-# -------------------------------
-all: $(TESTS:%=$(OUTDIR)/%.elf)
+build: $(BUILD_DIR)/$(NAME).hex $(BUILD_DIR)/$(NAME).sym $(BUILD_DIR)/$(NAME).dis
 
-# -------------------------------
-# Run Single Test on Spike
-# -------------------------------
-run: $(OUTDIR)/$(TEST).elf
-	@echo "[Running on Spike] $(OUTDIR)/$(TEST).elf"
-	spike -l $(SPIKE_FLAGS) -m0x80000000:0x800000 $(OUTDIR)/$(TEST).elf
+$(BUILD_DIR)/%.o: isa/%.S cpinstr.inc env/march_test.h macros/test_macros.h
+	$(GCC) $(INCLUDES) $(MARCH) -Wa,-als,-al -c -o $@ $< >$(BUILD_DIR)/$*.lst
 
-# -------------------------------
-# Run All Tests on Spike
-# -------------------------------
-run-all: all
-	@results_file="$(OUTDIR)/test_results.txt"; \
-	pass_count=0; fail_count=0; warn_count=0; error_count=0; \
-	echo "RISC-V March Test Results" > $$results_file; \
-	echo "=========================" >> $$results_file; \
-	echo "" >> $$results_file; \
-	failed_tests=""; \
-	for test in $(TESTS); do \
-		echo "[Running] $$test"; \
-		if $(MAKE) TEST=$$test run >/dev/null 2>&1; then \
-			result="$$test.S **** PASSED ***"; \
-			echo "$$result"; \
-			echo "$$result" >> $$results_file; \
-			pass_count=$$((pass_count + 1)); \
-		else \
-			result="$$test.S **** FAILED ***"; \
-			echo "$$result"; \
-			echo "$$result" >> $$results_file; \
-			fail_count=$$((fail_count + 1)); \
-			failed_tests="$$failed_tests $$test"; \
-		fi; \
-	done; \
-	echo ""; \
-	echo "" >> $$results_file; \
-	summary_line="___________________________ SUMMARY ____________________________"; \
-	echo "$$summary_line"; \
-	echo "$$summary_line" >> $$results_file; \
-	printf "PASS    : %d\n" $$pass_count; \
-	printf "PASS    : %d\n" $$pass_count >> $$results_file; \
-	printf "FAIL    : %d\n" $$fail_count; \
-	printf "FAIL    : %d\n" $$fail_count >> $$results_file; \
-	printf "WARNING : %d\n" $$warn_count; \
-	printf "WARNING : %d\n" $$warn_count >> $$results_file; \
-	printf "ERROR   : %d\n" $$error_count; \
-	printf "ERROR   : %d\n" $$error_count >> $$results_file; \
-	echo ""; \
-	echo "" >> $$results_file; \
-	echo "Results saved to: $$results_file"; \
-	if [ $$fail_count -gt 0 ]; then \
-		exit 1; \
-	fi
+$(BUILD_DIR)/%.elf: $(BUILD_DIR)/%.o $(LINKERFILE)
+	$(GCC) $(MARCH) $(GCC_LINK_OPT) -T$(LINKERFILE) -o $@ $<
 
-# -------------------------------
-# Clean
-# -------------------------------
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf
+	$(OBJCOPY) -O verilog $< $@
+
+$(BUILD_DIR)/%.sym: $(BUILD_DIR)/%.elf
+	$(NM) $< > $@
+#   $(ELF2SYM) $< $@
+
+$(BUILD_DIR)/%.dis: $(BUILD_DIR)/%.elf
+	$(OBJDUMP) -M numeric -D --section=.boot --section=.text $< > $@
+
+install: build | $(INSTALL_DIR)
+	@echo Installing $(BUILD_DIR)/$(NAME).hex $(BUILD_DIR)/$(NAME).sym $(BUILD_DIR)/$(NAME).dis to $(INSTALL_DIR)
+	cp $(BUILD_DIR)/$(NAME).hex $(BUILD_DIR)/$(NAME).sym $(BUILD_DIR)/$(NAME).dis $(INSTALL_DIR)
+
+uninstall:
+	@echo Uninstalling $(BUILD_DIR)/$(NAME).hex $(BUILD_DIR)/$(NAME).sym $(BUILD_DIR)/$(NAME).dis from $(INSTALL_DIR)
+	@cd $(INSTALL_DIR) && rm -f $(BUILD_DIR)/$(NAME).hex $(BUILD_DIR)/$(NAME).sym $(BUILD_DIR)/$(NAME).dis
+
+$(INSTALL_DIR):
+	mkdir $(INSTALL_DIR)
+
+.PHONY: clean all
+
 clean:
-	@echo "[Cleaning]"
-	$(RM) $(OUTDIR)/*.elf
+	@rm -f $(BUILD_DIR)/* $(BUILD_DIR)/*.lst
+
+SPIKE = spike
+SPIKE_FLAGS = -d --isa=RV64gV --varch=vlen:2048,elen:64,slen:2048 -m0x80000000
+
+run: $(BUILD_DIR)/$(NAME).elf
+	$(SPIKE) $(SPIKE_FLAGS) $<
+
